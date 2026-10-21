@@ -441,7 +441,16 @@ function toast(msg){let t=$(".toast");if(!t){t=document.createElement("div");t.c
 const pending=store.sget("toast",null);if(pending){store.sset("toast",null);setTimeout(()=>toast(esc(pending)),400)}
 
 function remember(){store.sset("ui",ui)}
-function go(view,param){ui.view=view;ui.param=param||null;ui.confirmDel=null;if(view!=="admin")ui.editing=ui.editing;remember();render();window.scrollTo({top:0,behavior:"instant"in window?"instant":"auto"})}
+let navDepth=0;
+function go(view,param,noPush){
+  const same=ui.view===view&&(ui.param||null)===(param||null);
+  ui.view=view;ui.param=param||null;ui.confirmDel=null;remember();
+  if(!noPush&&!same){navDepth++;try{history.pushState({ceniit:1,v:view,p:ui.param,d:navDepth},"")}catch(e){}}
+  render();window.scrollTo({top:0,behavior:"instant"in window?"instant":"auto"})}
+function goBack(to){if(navDepth>0){try{history.back();return}catch(e){}}go(to)}
+window.addEventListener("popstate",ev=>{const st=ev.state;
+  if(st&&st.ceniit){navDepth=st.d||0;go(st.v,st.p,true)}
+  else if(ui.view!=="home"){navDepth=0;go("home",null,true)}});
 
 /* ---------- publishing (the page is the record) ---------- */
 const artifactP=(window.claude&&window.claude.use)?window.claude.use("artifact").catch(()=>null):Promise.resolve(null);
@@ -512,7 +521,7 @@ function eventCard(e){const st=evStatus(e);
 function mapBlock(url,label){return `<a class="map" href="${esc(safeUrl(url)||MAPS_DEFAULT)}" target="_blank" rel="noopener" aria-label="Abrir ${esc(label)} en Google Maps">
   <div class="pin"><svg viewBox="0 0 24 24"><path d="M12 22s8-6.8 8-13a8 8 0 0 0-16 0c0 6.2 8 13 8 13z" fill="#013179" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="9" r="3" fill="#fff"/></svg><span>${esc(label)}</span></div>
   <span class="note">Mapa ilustrativo</span><span class="open">${I("ext","sm")}Abrir en Google Maps</span></a>`}
-function backBtn(to,label){return `<button class="btn-link back" data-go="${to}">${I("back","sm")}${label}</button>`}
+function backBtn(to,label){return `<button class="btn-link back" data-back="${to}">${I("back","sm")}${label}</button>`}
 
 /* ---------- views ---------- */
 function vHome(){
@@ -786,9 +795,10 @@ function render(){
 function rerenderKeepScroll(){const y=window.scrollY;render();window.scrollTo(0,y)}
 
 document.addEventListener("click",async ev=>{
-  const t=ev.target.closest("[data-go],[data-act],[data-open-event],[data-open-project],[data-save],[data-tab],[data-edit],[data-askdel],[data-del],[data-copy],[data-clearimg]");
+  const t=ev.target.closest("[data-back],[data-go],[data-act],[data-open-event],[data-open-project],[data-save],[data-tab],[data-edit],[data-askdel],[data-del],[data-copy],[data-clearimg]");
   if(!t)return;
   if(t.dataset.save){ev.stopPropagation();const id=t.dataset.save;if(saved.has(id)){saved.delete(id);toast("Quitado de tus agendados")}else{saved.add(id);toast("Evento agendado. Lo vas a ver en Inicio como recordatorio.")}store.set("saved",[...saved]);rerenderKeepScroll();return}
+  if(t.dataset.back){goBack(t.dataset.back);return}
   if(t.dataset.go){go(t.dataset.go);return}
   if(t.dataset.openEvent){go("event",t.dataset.openEvent);return}
   if(t.dataset.openProject){go("project",t.dataset.openProject);return}
@@ -864,6 +874,10 @@ document.addEventListener("submit",async ev=>{
 });
 if(window.matchMedia){try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(!document.documentElement.getAttribute("data-theme"))rerenderKeepScroll()})}catch(e){}}
 
+try{
+  if(ui.view!=="home"){history.replaceState({ceniit:1,v:"home",p:null,d:0},"");navDepth=1;history.pushState({ceniit:1,v:ui.view,p:ui.param,d:1},"")}
+  else history.replaceState({ceniit:1,v:"home",p:null,d:0},"");
+}catch(e){}
 render();
 })();
 </script>
