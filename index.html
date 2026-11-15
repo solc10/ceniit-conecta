@@ -155,6 +155,24 @@ main{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-le
 @media (prefers-reduced-motion:reduce){.hero-in{transition:none}}
 @media (max-width:600px){.hero,.hero-in{min-height:400px}.face{padding:20px}.face.back p{font-size:14px}}
 
+/* Install card (phones only, outside the installed app) */
+.install{position:relative;margin-bottom:16px;border-radius:18px;padding:16px;color:#fff;display:grid;gap:14px;
+  background:radial-gradient(120% 120% at 0% 0%,#0a4aa8 0%,#013179 55%,#01245e 100%);box-shadow:var(--shadow)}
+.install-top{display:flex;gap:14px;align-items:center;padding-right:28px}
+.install-top img{width:56px;height:56px;border-radius:14px;flex:none;background:#fff;display:block}
+.install h2{font-size:17px;font-weight:700;color:#fff}
+.install p{font-size:14px;opacity:.85;margin-top:2px}
+.install .btn-install{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:48px;border:0;border-radius:12px;background:#fff;color:#013179;font-family:var(--f-display);font-weight:700;font-size:15px;cursor:pointer}
+.install .btn-install:hover{filter:brightness(.96)}
+.install .close{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:999px;border:0;background:rgba(255,255,255,.14);color:#fff;display:grid;place-items:center;cursor:pointer}
+.sheet-bg{position:fixed;inset:0;z-index:60;background:rgba(5,12,30,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);color:var(--fg);width:min(100%,560px);border-radius:20px 20px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));display:grid;gap:16px;box-shadow:var(--shadow)}
+.sheet h2{font-size:19px}
+.sheet ol{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.sheet li{display:grid;grid-template-columns:32px 1fr;gap:12px;align-items:start;font-size:15px}
+.sheet li .n{width:32px;height:32px;border-radius:999px;background:var(--blue-soft);color:var(--blue-ink);font-weight:800;font-family:var(--f-display);display:grid;place-items:center}
+.sheet li .icon{vertical-align:-4px;color:var(--blue-ink)}
+.sheet .note{font-size:13px;color:var(--muted);background:var(--surface-2);border-radius:var(--r-sm);padding:10px 12px}
 .reminder{display:flex;gap:12px;align-items:center;background:var(--blue-soft);color:var(--fg);border-radius:var(--r);padding:14px 16px}
 .reminder .icon{color:var(--blue-ink)}
 .reminder b{font-weight:700}
@@ -432,7 +450,10 @@ const ICONS={
   heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M7 12h3l1.5-2.5 2 5L15 12h2"/>',
   dna:'<path d="M7 3c0 6 10 6 10 12s-10 6-10 6M17 3c0 6-10 6-10 12M17 21c0-2-1-3.5-2.5-4.5"/><path d="M8.5 7h7M8.5 17h7M10 12h4"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
-  check:'<path d="m5 12 5 5 9-10"/>'
+  check:'<path d="m5 12 5 5 9-10"/>',
+  mobile:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+  share:'<path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5v10h14V11h-1"/>',
+  dots:'<circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/>'
 };
 
 let toastTimer;
@@ -485,7 +506,7 @@ function shell(){
     <nav class="topnav" aria-label="Secciones">${NAV.map(([v,l,ic])=>`<button data-go="${v}" ${k===v?'aria-current="page"':""}>${I(ic,"sm")}${v==="admin"&&ui.logged?"Panel":l}${v==="admin"&&ui.logged?' <span class="dot" title="Sesión iniciada"></span>':""}</button>`).join("")}</nav>
     <button class="theme-btn" data-act="theme" aria-label="${isDark()?"Cambiar a modo claro":"Cambiar a modo oscuro"}" title="${isDark()?"Modo claro":"Modo oscuro"}">${I(isDark()?"sun":"moon")}</button>
   </div></header>
-  <main id="view" tabindex="-1">${view()}${footer()}</main>
+  <main id="view" tabindex="-1">${view()}${footer()}</main>${installSheet()}
   <nav class="tabbar" aria-label="Secciones"><div class="tabbar-in">${NAV.map(([v,l,ic])=>`<button data-go="${v}" ${k===v?'aria-current="page"':""}><span class="pill">${I(ic)}</span>${v==="admin"&&ui.logged?"Panel":l}${v==="admin"&&ui.logged?'<span class="dot"></span>':""}</button>`).join("")}</div></nav>`;
 }
 function view(){
@@ -524,6 +545,41 @@ function mapBlock(url,label){return `<a class="map" href="${esc(safeUrl(url)||MA
 function backBtn(to,label){return `<button class="btn-link back" data-back="${to}">${I("back","sm")}${label}</button>`}
 
 /* ---------- views ---------- */
+/* ---------- install as app (phones) ---------- */
+let installPrompt=null;
+const isIOS=()=>/iPhone|iPad|iPod/i.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
+const isPhone=()=>isIOS()||/Android|Mobi/i.test(navigator.userAgent);
+const isInstalled=()=>{try{return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){return false}};
+const showInstall=()=>STANDALONE&&isPhone()&&!isInstalled()&&!store.get("installHide",false);
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;if(ui.view==="home")rerenderKeepScroll()});
+window.addEventListener("appinstalled",()=>{installPrompt=null;store.set("installHide",true);ui.installSheet=false;rerenderKeepScroll();toast("¡Listo! Ya tenés Conectar en tu pantalla de inicio.")});
+function installCard(){
+  if(!showInstall())return "";
+  return `<section class="install" aria-labelledby="install-t">
+    <button class="close" data-act="install-hide" aria-label="Ocultar este aviso">${I("x","sm")}</button>
+    <div class="install-top"><img src="${SQ_IMG}" alt=""><div><h2 id="install-t">¿Querés usar Conectar como una app?</h2><p>Guardá el acceso directo con el logo en la pantalla de inicio de tu celular.</p></div></div>
+    <button class="btn-install" data-act="install">${I("mobile","sm")}Guardar en el inicio</button>
+  </section>`;
+}
+function installSheet(){
+  if(!ui.installSheet)return "";
+  const ios=isIOS();
+  const steps=ios?[
+    `Tocá el botón <b>Compartir</b> ${I("share","sm")} en la barra de Safari.`,
+    `Deslizá hacia abajo y elegí <b>“Agregar a inicio”</b>.`,
+    `Tocá <b>“Agregar”</b>. El logo de Conectar va a aparecer en tu pantalla de inicio.`
+  ]:[
+    `Tocá el menú ${I("dots","sm")} arriba a la derecha del navegador.`,
+    `Elegí <b>“Instalar aplicación”</b> o <b>“Agregar a la pantalla principal”</b>.`,
+    `Confirmá con <b>“Instalar”</b> o <b>“Agregar”</b>. El logo de Conectar va a aparecer en tu pantalla de inicio.`
+  ];
+  return `<div class="sheet-bg" data-act="install-close"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-t">
+    <h2 id="sheet-t">Cómo guardar Conectar en tu celular</h2>
+    <ol>${steps.map((s,i)=>`<li><span class="n">${i+1}</span><span>${s}</span></li>`).join("")}</ol>
+    <p class="note">${ios?"En iPhone tiene que estar abierta en Safari.":"Si no ves la opción, abrí la página en Google Chrome."} Después la abrís desde el ícono, como cualquier aplicación.</p>
+    <button class="btn btn-primary" data-act="install-close">Entendido</button>
+  </div></div>`;
+}
 function vHome(){
   const t=todayStr();
   const upcoming=S.events.filter(e=>e.date>=t).sort(byDate);
@@ -531,6 +587,7 @@ function vHome(){
   const mine=upcoming.filter(e=>saved.has(e.id));
   const info=S.info;
   return `
+  ${installCard()}
   ${mine.length?`<div class="reminder" style="margin-bottom:16px">${I("bell")}<div><b>Tenés ${mine.length} evento${mine.length>1?"s":""} agendado${mine.length>1?"s":""}.</b> Próximo: <button class="btn-link" style="padding:0" data-open-event="${esc(mine[0].id)}">${esc(mine[0].title)}</button> · ${mine[0].date===t?"hoy":esc(fmtShort(mine[0].date))}, ${esc(mine[0].start)} h</div></div>`:""}
   <div class="home-top">
     <button class="hero ${ui.flip?"flipped":""}" data-act="flip" aria-pressed="${ui.flip}" aria-label="${ui.flip?"Volver a la imagen":"Ver qué es el CENIIT"}">
@@ -803,6 +860,9 @@ document.addEventListener("click",async ev=>{
   if(t.dataset.copy){const v=t.dataset.copy;try{await navigator.clipboard.writeText(v);toast("Copiado: "+esc(v))}catch(e){toast("Seleccioná el texto para copiarlo: "+esc(v))}return}
   if(t.dataset.clearimg){const k=t.dataset.clearimg;pendingImgs[k]=null;const h=t.closest("form").querySelector(`input[type=hidden][name="${k}"]`);if(h)h.value="";$("#"+k+"-thumb").innerHTML=I("image");t.remove();return}
   const a=t.dataset.act;
+  if(a==="install"){if(installPrompt){const p=installPrompt;installPrompt=null;try{p.prompt();const r=await p.userChoice;if(r&&r.outcome==="accepted"){store.set("installHide",true)}}catch(e){}rerenderKeepScroll()}else{ui.installSheet=true;rerenderKeepScroll()}return}
+  if(a==="install-close"){if(ev.target!==t&&t.classList.contains("sheet-bg"))return;ui.installSheet=false;rerenderKeepScroll();return}
+  if(a==="install-hide"){store.set("installHide",true);rerenderKeepScroll();toast("Listo. Podés guardarla cuando quieras desde el menú del navegador.");return}
   if(a==="flip"){ui.flip=!ui.flip;remember();const h=t;h.classList.toggle("flipped",ui.flip);h.setAttribute("aria-pressed",ui.flip);h.setAttribute("aria-label",ui.flip?"Volver a la imagen":"Ver qué es el CENIIT");h.querySelector(".front").setAttribute("aria-hidden",ui.flip);h.querySelector(".back").setAttribute("aria-hidden",!ui.flip);return}
   if(a==="theme"){const next=isDark()?"light":"dark";document.documentElement.setAttribute("data-theme",next);store.set("theme",next);rerenderKeepScroll();return}
   if(a==="ftoggle"){ui.filtersOpen=!ui.filtersOpen;remember();rerenderKeepScroll();return}
