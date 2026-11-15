@@ -721,6 +721,8 @@ function vLocation(){
     <div class="card"><h3>Datos de contacto</h3>
       <div class="kv">${I("pin")}<span>${esc(i.address||"Gdor. Luis Vernet y Apóstol Felipe, La Rioja, Argentina")}</span>
       ${[i.email,i.email2].filter(Boolean).map(m=>`${I("mail")}<span style="overflow-wrap:anywhere">${esc(m)}</span>`).join("")}</div>
+      <h3 style="margin-top:8px">Autoridades</h3>
+      <div class="kv">${I("user")}<span><b>Dr. Juan Carlos Brizuela</b><br><span style="color:var(--muted)">Secretario técnico del CENIIT</span></span></div>
       <a class="btn btn-primary" href="${MAPS_DEFAULT}" target="_blank" rel="noopener" style="margin-top:6px">${I("ext","sm")}Cómo llegar</a></div>
   </div>`;
 }
