@@ -188,6 +188,13 @@ main{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-le
 .checks{display:grid;gap:6px}
 .checks label{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600}
 .checks input{accent-color:var(--blue);width:18px;height:18px}
+.auth-card{display:flex;gap:16px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;cursor:pointer;color:var(--fg);transition:box-shadow .15s}
+.auth-card:hover{box-shadow:var(--shadow)}
+.auth-card .avatar{width:64px;height:64px;font-size:22px}
+.auth-card b{font-family:var(--f-display);font-size:17px;display:block}
+.auth-card .role{color:var(--muted);font-size:14px}
+.auth-card .go{margin-left:auto;color:var(--link);font-weight:600;font-size:14px;display:flex;gap:6px;align-items:center;white-space:nowrap}
+@media (max-width:600px){.auth-card{flex-wrap:wrap}.auth-card .go{margin-left:80px}}
 .reminder{display:flex;gap:12px;align-items:center;background:var(--blue-soft);color:var(--fg);border-radius:var(--r);padding:14px 16px}
 .reminder .icon{color:var(--blue-ink)}
 .reminder b{font-weight:700}
@@ -636,6 +643,11 @@ function vHome(){
     <div><button class="btn btn-ghost" data-go="projects">Ver más proyectos ${I("arrow","sm")}</button></div>
   </section>
 
+  ${(()=>{const x=S.people.find(y=>y.id==="pe-brizuela");return x?`<section class="section" aria-labelledby="auth-h">
+    <div class="sec-head"><div><span class="eyebrow">Autoridades</span><h2 id="auth-h">Quién está a cargo</h2></div></div>
+    <button class="auth-card" data-open-person="${esc(x.id)}">${avatar(x)}<span><b>${esc(fullName(x))}</b><span class="role">${esc(x.role||"")}</span></span><span class="go">Ver perfil ${I("arrow","sm")}</span></button>
+  </section>`:""})()}
+
   <section class="section" aria-labelledby="loc-h">
     <div class="sec-head"><h2 id="loc-h">¿Dónde estamos ubicados?</h2></div>
     ${mapBlock(MAPS_DEFAULT,"CENIIT – UNLaR")}
@@ -677,7 +689,7 @@ function vProject(p){
 
 /* ---------- perfiles de investigadores ---------- */
 const fullName=x=>[x.prefix,x.name].filter(Boolean).join(" ");
-const initials=x=>String(x.name||"").split(/\s+/).filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase();
+const initials=x=>{const w=String(x.name||"").split(/\s+/).filter(Boolean);return (((w[0]||"")[0]||"")+(w.length>1?w[w.length-1][0]:"")).toUpperCase()};
 const avatar=(x,cls="")=>`<span class="avatar ${cls}" aria-hidden="true">${x.photo?`<img src="${esc(x.photo)}" alt="">`:esc(initials(x))}</span>`;
 const peopleOf=p=>(p.people||[]).map(id=>S.people.find(x=>x.id===id)).filter(Boolean);
 const projectsOf=x=>S.projects.filter(p=>(p.people||[]).includes(x.id)).sort((a,b)=>b.date.localeCompare(a.date));
